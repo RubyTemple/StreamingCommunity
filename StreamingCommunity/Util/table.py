@@ -195,7 +195,7 @@ class TVShowManager:
                                    "- Inserisci (ad esempio, 3-*) per scaricare dall'episodio specificato fino alla fine della serie"
                     
                     if is_telegram:
-                        key = bot.ask("select_title_episode", prompt_msg, None)
+                        key = bot.ask("select_title_episode", telegram_msg, None)
                     else:
                         key = Prompt.ask(prompt_msg)
                 else:
