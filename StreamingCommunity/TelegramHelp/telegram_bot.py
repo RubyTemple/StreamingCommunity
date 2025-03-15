@@ -14,8 +14,10 @@ from typing import Optional
 
 # External libraries
 import telebot
+from telebot import types
 
 session_data = {}
+
 
 class TelegramSession:
 
@@ -68,6 +70,7 @@ class TelegramSession:
                 return
 
         print(f"Screen_id {screen_id} non trovato.")
+
 
 class TelegramRequestManager:
     _instance = None
@@ -145,6 +148,7 @@ class TelegramRequestManager:
             print(f" clear_file - errore: {e}")
             return False
 
+
 # Funzione per caricare variabili da un file .env
 def load_env(file_path="../../.env"):
     if os.path.exists(file_path):
@@ -153,6 +157,7 @@ def load_env(file_path="../../.env"):
                 if line.strip() and not line.startswith("#"):
                     key, value = line.strip().split("=", 1)
                     os.environ[key] = value
+
 
 # Carica le variabili
 load_env()
@@ -176,10 +181,11 @@ class TelegramBot:
                     authorized_users = [int(uid) for uid in authorized_users.split(",") if uid.strip().isdigit()]
 
                 cls._instance = cls.init_bot(config['token'], authorized_users)
-                #cls._instance = cls.init_bot(config['token'], config['authorized_user_id'])
+                # cls._instance = cls.init_bot(config['token'], config['authorized_user_id'])
 
             else:
-                raise Exception("Bot non ancora inizializzato. Chiamare prima init_bot() con token e authorized_user_id")
+                raise Exception(
+                    "Bot non ancora inizializzato. Chiamare prima init_bot() con token e authorized_user_id")
         return cls._instance
 
     @classmethod
@@ -220,9 +226,9 @@ class TelegramBot:
 
                     if screen_exists:
                         if (
-                            "titolo" not in script
-                            and script["status"] == "running"
-                            and (current_time - script["start_time"]) > 600
+                                "titolo" not in script
+                                and script["status"] == "running"
+                                and (current_time - script["start_time"]) > 600
                         ):
                             # Prova a terminare la sessione screen
                             try:
@@ -299,6 +305,10 @@ class TelegramBot:
         @self.bot.message_handler(func=lambda message: True)
         def handle_all_messages(message):
             self.handle_response(message)
+
+        @self.bot.callback_query_handler(func=lambda call: True)
+        def handle_callback(call):
+            self.handle_callback(call)
 
     def is_authorized(self, user_id):
         return user_id in self.authorized_users
@@ -382,6 +392,7 @@ class TelegramBot:
         with open(json_file, "w") as f:
             json.dump(scripts_data, f, indent=4)
 
+    '''
     def handle_list_scripts(self, message):
         if not self.is_authorized(message.from_user.id):
             print(f" Non sei autorizzato.")
@@ -434,6 +445,77 @@ class TelegramBot:
 
         print(f"{final_msg}")
         self.bot.send_message(message.chat.id, final_msg, parse_mode="Markdown")
+
+    '''
+
+    def handle_list_scripts(self, message):
+        if not self.is_authorized(message.from_user.id):
+            print("Non sei autorizzato.")
+            self.bot.send_message(message.chat.id, "Non sei autorizzato.")
+            return
+
+        try:
+            with open("../../scripts.json", "r") as f:
+                scripts_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            scripts_data = []
+
+        if not scripts_data:
+            print("Nessuno script registrato.")
+            self.bot.send_message(message.chat.id, "Nessuno script registrato.")
+            return
+
+        current_time = time.time()
+        text_lines = ["**Script Registrati:**\n"]
+        inline_keyboard = []
+
+        for script in scripts_data:
+            # Calcola la durata
+            duration = current_time - script["start_time"]
+            if "end_time" in script:
+                duration = script["end_time"] - script["start_time"]
+
+            hours, rem = divmod(duration, 3600)
+            minutes, seconds = divmod(rem, 60)
+            duration_str = f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
+
+            status_icons = {"running": "▶️", "stopped": "⏹️", "completed": "✅"}
+
+            line = (
+                f"• ID: `{script['screen_id']}`\n"
+                f"• Stato: {status_icons.get(script['status'], '')}\n"
+                f"• Durata: {duration_str}\n"
+                f"• Titolo: {script.get('titolo', 'N/A')}\n"
+            )
+            text_lines.append(line)
+
+            # Crea i pulsanti inline per /screen e /stop
+            button_screen = types.InlineKeyboardButton(
+                text=f"Screen {script.get('titolo', 'N/A')}",
+                callback_data=f"/screen {script['screen_id']}"
+            )
+            button_stop = types.InlineKeyboardButton(
+                text=f"Stop {script.get('titolo', 'N/A')}",
+                callback_data=f"/stop {script['screen_id']}"
+            )
+            inline_keyboard.append([button_screen, button_stop])
+
+        final_msg = "\n".join(text_lines)
+        if len(final_msg) > 4000:
+            final_msg = final_msg[:4000] + "\n[...] (messaggio troncato)"
+
+        # Crea l'oggetto InlineKeyboardMarkup senza parametri e aggiungi le righe di pulsanti
+        reply_markup = types.InlineKeyboardMarkup()
+        for row in inline_keyboard:
+            reply_markup.add(*row)
+
+        print(final_msg)
+        self.bot.send_message(
+            message.chat.id,
+            final_msg,
+            parse_mode="Markdown",
+            reply_markup=reply_markup
+        )
 
     def handle_stop_script(self, message):
         if not self.is_authorized(message.from_user.id):
@@ -611,6 +693,43 @@ class TelegramBot:
         # Cancella il file temporaneo
         os.remove(temp_file)
 
+    def handle_callback(self, call):
+        # Creiamo un oggetto message "fittizio" per compatibilità con handle_screen_status
+        class FakeMessage:
+            def __init__(self, chat_id, text, user_id):
+                self.chat = type('Chat', (object,), {"id": chat_id})
+                self.text = text
+                self.from_user = type("User", (), {"id": user_id})()
+
+        data = call.data
+        if data.startswith("/screen"):
+            command_parts = data.split()
+            if len(command_parts) < 2:
+                self.bot.send_message(call.message.chat.id, "ID mancante nel comando. Usa: /screen <ID>")
+                return
+
+            screen_id = command_parts[1]
+
+            fake_message = FakeMessage(call.message.chat.id, f"/screen {screen_id}", call.from_user.id)
+            self.handle_screen_status(fake_message)
+
+        elif data.startswith("/stop"):
+            command_parts = data.split()
+            if len(command_parts) < 2:
+                self.bot.send_message(call.message.chat.id, "ID mancante nel comando. Usa: /stop <ID>")
+                return
+
+            stop_id = command_parts[1]
+
+            fake_message = FakeMessage(call.message.chat.id, f"/stop {stop_id}", call.from_user.id)
+            self.handle_stop_script(fake_message)
+
+        fake_message = FakeMessage(call.message.chat.id, "/list", call.from_user.id)
+        self.handle_list_scripts(fake_message)
+
+        # Rispondi alla callback per rimuovere la notifica di "loading"
+        self.bot.answer_callback_query(call.id)
+
     def send_message(self, message, choices):
 
         formatted_message = message
@@ -635,8 +754,8 @@ class TelegramBot:
     def _send_long_message(self, chat_id, text, chunk_size=4096):
         """Suddivide e invia un messaggio troppo lungo in più parti."""
         for i in range(0, len(text), chunk_size):
-            print(f"{text[i:i+chunk_size]}")
-            self.bot.send_message(chat_id, text[i : i + chunk_size])
+            print(f"{text[i:i + chunk_size]}")
+            self.bot.send_message(chat_id, text[i: i + chunk_size])
 
     def ask(self, type, prompt_message, choices, timeout=60):
         self.request_manager.create_request(type)
@@ -681,6 +800,7 @@ class TelegramBot:
 def get_bot_instance():
     return TelegramBot.get_instance()
 
+
 # Esempio di utilizzo
 if __name__ == "__main__":
 
@@ -699,9 +819,11 @@ if __name__ == "__main__":
 
     try:
         TOKEN = token  # Inserisci il token del tuo bot Telegram sul file .env
-        AUTHORIZED_USER_ID = list(map(int, authorized_users.split(",")))  # Inserisci il tuo ID utente Telegram sul file .env
+        AUTHORIZED_USER_ID = list(
+            map(int, authorized_users.split(",")))  # Inserisci il tuo ID utente Telegram sul file .env
     except ValueError as e:
-        print(f"Errore nella conversione degli ID autorizzati: {e}. Controlla il file .env e assicurati che gli ID siano numeri interi separati da virgole.")
+        print(
+            f"Errore nella conversione degli ID autorizzati: {e}. Controlla il file .env e assicurati che gli ID siano numeri interi separati da virgole.")
         sys.exit(1)
 
     # Inizializza il bot
