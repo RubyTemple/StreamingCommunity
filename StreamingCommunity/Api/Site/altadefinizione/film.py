@@ -85,6 +85,7 @@ def download_film(select_title: MediaItem) -> str:
 
     except Exception as e:
         console.print(f"[red]Error fetching mostraguarda link: {e}")
+        console.print("[yellow]Missing access credentials. This part of the code is still under development.")
         if site_constant.TELEGRAM_BOT:
             bot.send_message(f"ERRORE\n\nErrore durante il recupero del link mostra/guarda.\n\n{e}", None)
         return None
