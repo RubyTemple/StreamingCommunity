@@ -30,11 +30,11 @@ from ...FFmpeg import print_duration_table
 
 
 # Config
-REQUEST_VERIFY = bool(config_manager.get_bool('REQUESTS', 'verify'))
-REQUEST_HTTP2 = bool(config_manager.get_bool('REQUESTS', 'http2'))
-GET_ONLY_LINK = bool(config_manager.get_bool('M3U8_PARSER', 'get_only_link'))
+REQUEST_VERIFY = config_manager.get_bool('REQUESTS', 'verify')
+REQUEST_HTTP2 = config_manager.get_bool('REQUESTS', 'http2')
+GET_ONLY_LINK = config_manager.get_bool('M3U8_PARSER', 'get_only_link')
 REQUEST_TIMEOUT = config_manager.get_float('REQUESTS', 'timeout')
-TELEGRAM_BOT = bool(config_manager.get_bool('DEFAULT', 'telegram_bot'))
+TELEGRAM_BOT = config_manager.get_bool('DEFAULT', 'telegram_bot')
 
 
 # Variable
