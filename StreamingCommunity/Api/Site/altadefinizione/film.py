@@ -88,6 +88,7 @@ def download_film(select_title: MediaItem) -> str:
         console.print("[yellow]Missing access credentials. This part of the code is still under development.")
         if site_constant.TELEGRAM_BOT:
             bot.send_message(f"ERRORE\n\nErrore durante il recupero del link mostra/guarda.\n\n{e}", None)
+            bot.send_message(f"ERRORE\n\nCredenziali di accesso mancanti.\nQuesta parte del codice è ancora in fase di sviluppo.", None)
         return None
 
     # Create supervio URL
