@@ -111,6 +111,9 @@ def MP4_downloader(url: str, path: str, referer: str = None, headers_: dict = No
     interrupt_handler = InterruptHandler()
     original_handler = signal.signal(signal.SIGINT, partial(signal_handler, interrupt_handler=interrupt_handler, original_handler=signal.getsignal(signal.SIGINT)))
 
+    # Ensure the output directory exists
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
     try:
         transport = httpx.HTTPTransport(verify=REQUEST_VERIFY, http2=REQUEST_HTTP2)
         
@@ -123,6 +126,7 @@ def MP4_downloader(url: str, path: str, referer: str = None, headers_: dict = No
                     console.print("[bold red]No video stream found.[/bold red]")
                     return None, False
 
+                # Create a fancy progress bar
                 progress_bar = tqdm(
                     total=total,
                     ascii='░▒█',
