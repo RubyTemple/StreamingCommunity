@@ -1,4 +1,4 @@
-# 16.03.25
+# 21.05.24
 
 import sys
 import subprocess
@@ -96,7 +96,7 @@ def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_
     if len_database > 0:
         select_title = get_select_title(table_show_manager, media_search_manager)
         process_search_result(select_title)
-
+    
     else:
         console.print(f"\n[red]Nothing matching was found for[white]: [purple]{string_to_search}")
 

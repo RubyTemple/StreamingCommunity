@@ -54,7 +54,7 @@ def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_
     if string_to_search is None:
         string_to_search = msg.ask(f"\n[purple]Insert word to search in [green]{site_constant.SITE_NAME}").strip()
 
-    # Search on database
+    # Perform the database search
     len_database = title_search(quote_plus(string_to_search))
 
     # If only the database is needed, return the manager
@@ -69,9 +69,4 @@ def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_
 
         # If no results are found, ask again
         console.print(f"\n[red]Nothing matching was found for[white]: [purple]{string_to_search}")
-
-        if site_constant.TELEGRAM_BOT:
-            bot.send_message(f"Nessun risultato trovato riprova", None)
-
-        # Retry
         search()
