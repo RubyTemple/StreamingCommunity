@@ -79,24 +79,24 @@ def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_
         select_title = MediaItem(**direct_item)
         process_search_result(select_title)
         return
-    
+
     # Get the user input for the search term
     string_to_search = get_user_input(string_to_search)
-    
+
     # Perform the database search
     len_database = title_search(quote_plus(string_to_search))
 
     # If only the database is needed, return the manager
     if get_onlyDatabase:
         return media_search_manager
-    
+
     if site_constant.TELEGRAM_BOT:
         bot = get_bot_instance()
-        
+
     if len_database > 0:
         select_title = get_select_title(table_show_manager, media_search_manager)
         process_search_result(select_title)
-    
+
     else:
         console.print(f"\n[red]Nothing matching was found for[white]: [purple]{string_to_search}")
 
