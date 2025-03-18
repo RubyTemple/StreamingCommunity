@@ -1,5 +1,6 @@
 # 02.07.24
-
+import subprocess
+import sys
 from urllib.parse import quote_plus
 
 
@@ -12,7 +13,7 @@ from rich.prompt import Prompt
 from StreamingCommunity.Api.Template import get_select_title
 from StreamingCommunity.Api.Template.config_loader import site_constant
 from StreamingCommunity.Api.Template.Class.SearchType import MediaItem
-
+from StreamingCommunity.TelegramHelp.telegram_bot import get_bot_instance
 
 # Logic class
 from .site import title_search, media_search_manager, table_show_manager
@@ -29,7 +30,29 @@ _engineDownload = "tor"
 console = Console()
 msg = Prompt()
 
+def get_user_input(string_to_search: str = None):
+    """
+    Asks the user to input a search term.
+    Handles both Telegram bot input and direct input.
+    """
+    if string_to_search is None:
+        if site_constant.TELEGRAM_BOT:
+            bot = get_bot_instance()
+            string_to_search = bot.ask(
+                "key_search",
+                f"Enter the search term\nor type 'back' to return to the menu: ",
+                None
+            )
 
+            if string_to_search == 'back':
+
+                # Restart the script
+                subprocess.Popen([sys.executable] + sys.argv)
+                sys.exit()
+        else:
+            string_to_search = msg.ask(f"\n[purple]Insert a word to search in [green]{site_constant.SITE_NAME}").strip()
+
+    return string_to_search
 
 def process_search_result(select_title):
     """
@@ -51,8 +74,8 @@ def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_
         process_search_result(select_title)
         return
 
-    if string_to_search is None:
-        string_to_search = msg.ask(f"\n[purple]Insert word to search in [green]{site_constant.SITE_NAME}").strip()
+    # Get the user input for the search term
+    string_to_search = get_user_input(string_to_search)
 
     # Perform the database search
     len_database = title_search(quote_plus(string_to_search))
@@ -60,6 +83,9 @@ def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_
     # If only the database is needed, return the manager
     if get_onlyDatabase:
         return media_search_manager
+
+    if site_constant.TELEGRAM_BOT:
+        bot = get_bot_instance()
 
     if len_database > 0:
         select_title = get_select_title(table_show_manager, media_search_manager)
@@ -69,4 +95,6 @@ def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_
 
         # If no results are found, ask again
         console.print(f"\n[red]Nothing matching was found for[white]: [purple]{string_to_search}")
+        if site_constant.TELEGRAM_BOT:
+            bot.send_message(f"No results found, please try again", None)
         search()

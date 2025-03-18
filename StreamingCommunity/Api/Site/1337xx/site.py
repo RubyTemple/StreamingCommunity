@@ -62,7 +62,11 @@ def title_search(word_to_search: str) -> int:
     # Create soup and find table
     soup = BeautifulSoup(response.text, "html.parser")
 
-    for i, tr in enumerate(soup.find_all('tr')):
+
+    i = 0
+    # non ho usato enumerate poichè vi è un try che potrebbe sfalzare gli indici.
+    # lasciare così o tenerne conto se si modifica.
+    for tr in soup.find_all('tr'):
         try:
 
             title_info = {
@@ -79,6 +83,8 @@ def title_search(word_to_search: str) -> int:
             if site_constant.TELEGRAM_BOT:
                 choice_text = f"{i} - {title_info['name']} - {title_info['seader']} - ({title_info['size']})"
                 choices.append(choice_text)
+
+            i += 1
 
         except Exception as e:
             print(f"Error parsing a film entry: {e}")
